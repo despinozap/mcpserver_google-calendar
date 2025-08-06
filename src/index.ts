@@ -1,45 +1,40 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { getPublicIP } from './services/network.service.js';
+import { listEvents } from './services/googleCalendar.service.js';
 
 // Create server
 const server = new McpServer({
-	name: 'My MCP Server',
+	name: 'Google Calendar',
 	version: '0.0.1',
 });
 
-// Define tools: Echo
 server.tool(
-	'echo_message',
-	'Echo a given message',
+	'get_last_calendar_events',
+	'Get the last calendar events from Google Calendar',
 	{
-		message: z.string(),
+		limit: z
+			.number()
+			.min(1)
+			.max(50)
+			.default(10)
+			.optional()
+			.describe(
+				'Number of events to retrieve, between 1 and 50. Default is 10.',
+			),
 	},
-	async ({ message }) => {
+	async ({ limit }) => {
+		const lastEvents = await listEvents(limit);
 		return {
 			content: [
 				{
 					type: 'text',
-					text: `The echo for the given message is ${message}`,
+					text: `The last calendar events are: ${JSON.stringify(lastEvents)}`,
 				},
 			],
 		};
 	},
 );
-
-// Define tools: Get Public IP
-server.tool('get_public_ip', 'Get the public IP address', {}, async () => {
-	const ip = await getPublicIP();
-	return {
-		content: [
-			{
-				type: 'text',
-				text: `Your public IP address is ${ip}`,
-			},
-		],
-	};
-});
 
 // Listen client connections
 const transport = new StdioServerTransport();
