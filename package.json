@@ -6,7 +6,11 @@
   "scripts": {
     "build": "tsc",
     "start": "tsc && node dist/index.js",
-    "inspector": "npx -y @modelcontextprotocol/inspector npx -y tsx src/index.ts"
+    "inspector": "npx -y @modelcontextprotocol/inspector npx -y tsx src/index.ts",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write --unsafe .",
+    "format": "biome format --write .",
+    "style": "biome check --write --unsafe . && biome format --write ."
   },
   "keywords": [],
   "author": "",
@@ -17,6 +21,7 @@
     "zod": "^3.24.4"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.1.3",
     "@types/node": "^22.15.17",
     "typescript": "^5.8.3"
   }
