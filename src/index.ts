@@ -1,6 +1,10 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
+import type {
+	ListEventsRequest,
+	ListEventsResponse,
+} from './dtos/googleCalendar.dto.js';
 import { listEvents } from './services/googleCalendar.service.js';
 
 // Create server
@@ -10,26 +14,30 @@ const server = new McpServer({
 });
 
 server.tool(
-	'get_last_calendar_events',
-	'Get the last calendar events from Google Calendar',
+	'get_calendar_events',
+	'Get calendar events from Google Calendar. By default, it retrieves events from the last 3 months.',
 	{
-		limit: z
-			.number()
-			.min(1)
-			.max(50)
-			.default(10)
+		startDate: z
+			.string()
 			.optional()
-			.describe(
-				'Number of events to retrieve, between 1 and 50. Default is 10.',
-			),
+			.describe('The start date for the event search. ISO 8601 format.'),
+		endDate: z
+			.string()
+			.optional()
+			.describe('The end date for the event search. ISO 8601 format.'),
 	},
-	async ({ limit }) => {
-		const lastEvents = await listEvents(limit);
+	async (params) => {
+		const req: ListEventsRequest = {
+			startDate: params.startDate,
+			endDate: params.endDate,
+		};
+
+		const lastEvents: ListEventsResponse = await listEvents(req);
 		return {
 			content: [
 				{
 					type: 'text',
-					text: `The last calendar events are: ${JSON.stringify(lastEvents)}`,
+					text: `${JSON.stringify(lastEvents.events, null, 2)}`,
 				},
 			],
 		};

@@ -1,4 +1,8 @@
 import { type calendar_v3, google } from 'googleapis';
+import type {
+	ListEventsRequest,
+	ListEventsResponse,
+} from '../dtos/googleCalendar.dto.js';
 import { getGoogleAuth } from '../providers/google.provider.js';
 
 function authService() {
@@ -10,7 +14,21 @@ function authService() {
 	return getGoogleAuth(SCOPES);
 }
 
-export async function listEvents(limit: number = 10): Promise<Array<any>> {
+function getDefaultStartDate(): string {
+	const date = new Date();
+	date.setMonth(date.getMonth() - 3);
+	return date.toISOString();
+}
+
+function getDefaultEndDate(): string {
+	const date = new Date();
+	date.setMonth(date.getMonth() + 3);
+	return date.toISOString();
+}
+
+export async function listEvents(
+	req: ListEventsRequest,
+): Promise<ListEventsResponse> {
 	const auth = authService();
 	const calendar: calendar_v3.Calendar = google.calendar({
 		version: 'v3',
@@ -18,24 +36,24 @@ export async function listEvents(limit: number = 10): Promise<Array<any>> {
 	});
 	const res = await calendar.events.list({
 		calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
-		timeMax: new Date().toISOString(), // Look for events up to now.
+		timeMin: req.startDate || getDefaultStartDate(),
+		timeMax: req.endDate || getDefaultEndDate(),
 		singleEvents: true,
-		orderBy: 'startTime', // Sorts from oldest to newest.
+		orderBy: 'startTime',
 	});
 
-	const allPastEvents: calendar_v3.Schema$Event[] | undefined = res.data.items;
-	if (!allPastEvents) {
-		throw new Error('No past events found.');
+	const events: calendar_v3.Schema$Event[] | undefined = res.data.items;
+	if (!events) {
+		return {
+			events: [],
+		} as ListEventsResponse;
 	}
 
-	// Get the last events and reverse them to show most recent first.
-	const lastEvents: calendar_v3.Schema$Event[] = allPastEvents
-		.slice(-limit)
-		.reverse();
-
-	return lastEvents.map((event) => ({
-		start: event.start?.dateTime || event.start?.date,
-		end: event.end?.dateTime || event.end?.date,
-		summary: event.summary,
-	}));
+	return {
+		events: events.map((event) => ({
+			start: event.start?.dateTime || event.start?.date,
+			end: event.end?.dateTime || event.end?.date,
+			summary: event.summary,
+		})),
+	} as ListEventsResponse;
 }
